@@ -1,5 +1,6 @@
 package com.bearhug.presentation.dto.user;
 
+import com.bearhug.persistence.entity.UserEntity;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -18,6 +19,6 @@ public record EmployeeRequest(
         @Min(value = 18, message = "Minimum age is 18")
         Byte age,
         @NotNull
-        Long idUser
+        Long id
 ) {
 }

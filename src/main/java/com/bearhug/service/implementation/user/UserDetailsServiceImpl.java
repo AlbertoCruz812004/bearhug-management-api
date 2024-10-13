@@ -74,15 +74,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         if (roleEntityList.isEmpty()) throw new IllegalArgumentException("The roles specified does not exist.");
 
-        UserEntity user = UserEntity.builder()
-                .username(username)
-                .password(passwordEncoder.encode(password))
-                .roles(roleEntityList)
-                .isEnabled(true)
-                .accountNoExpired(true)
-                .accountNoLocked(true)
-                .credentialNoExpired(true)
-                .build();
+        UserEntity user = new UserEntity(username, passwordEncoder.encode(password), roleEntityList);
 
         UserEntity userSaved = userRepository.save(user);
 

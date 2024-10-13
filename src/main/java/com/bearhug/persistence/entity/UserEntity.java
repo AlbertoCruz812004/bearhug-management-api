@@ -24,10 +24,32 @@ import java.util.Set;
 @NoArgsConstructor
 @Getter
 @Setter
-@Builder
 @Entity
 @Table(name = "usuario")
 public class UserEntity {
+
+    public UserEntity(Long id) {
+        this.id = id;
+    }
+
+    public UserEntity(String username, String password) {
+        this.username = username;
+        this.password = password;
+        this.isEnabled = true;
+        this.accountNoExpired = true;
+        this.accountNoLocked = true;
+        this.credentialNoExpired = true;
+    }
+
+    public UserEntity(String username, String password, Set<RoleEntity> roles) {
+        this.username = username;
+        this.password = password;
+        this.roles = roles;
+        this.isEnabled = true;
+        this.accountNoExpired = true;
+        this.accountNoLocked = true;
+        this.credentialNoExpired = true;
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,7 +73,7 @@ public class UserEntity {
     @Column(name = "credential_No_Expired")
     private boolean credentialNoExpired;
 
-    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.MERGE, CascadeType.PERSIST}, targetEntity = RoleEntity.class)
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REMOVE}, targetEntity = RoleEntity.class)
     @JoinTable(name = "usuario_rol", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "rol_id"))
     private Set<RoleEntity> roles = new HashSet<>();
 }

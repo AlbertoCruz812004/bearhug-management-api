@@ -33,7 +33,7 @@ public class PersonEntity {
     @Column(name = "edad", nullable = false)
     private Byte age;
 
-    @OneToOne(cascade = CascadeType.REMOVE, targetEntity = UserEntity.class)
+    @OneToOne(cascade = { CascadeType.REMOVE, CascadeType.MERGE}, targetEntity = UserEntity.class)
     @JoinColumn(name = "id_usuario", nullable = false, unique = true)
     private UserEntity user;
 }

@@ -1,14 +1,11 @@
 package com.bearhug.presentation.controller.user;
 
-import com.bearhug.presentation.dto.user.EmployeePageableResponse;
+import com.bearhug.presentation.dto.SimpleResponse;
+import com.bearhug.presentation.dto.user.EmployeeListPageable;
 import com.bearhug.presentation.dto.user.EmployeeRequest;
 import com.bearhug.service.interfaces.user.IEmployeeService;
-import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,30 +18,29 @@ public class EmployeeController {
 
     private final IEmployeeService employeeService;
 
-    @Autowired
     public EmployeeController(IEmployeeService employeeService) {
         this.employeeService = employeeService;
     }
 
-    @GetMapping
-    public ResponseEntity<PagedModel<EntityModel<EmployeePageableResponse>>> getAllEmployees(@PageableDefault Pageable pageable) {
-        return ResponseEntity.ok(employeeService.showAllEmployees(pageable));
+    @GetMapping("/all")
+    public ResponseEntity<?> findAllEmployees(Pageable pageable) {
+        return ResponseEntity.ok(employeeService.findAllEmployees(pageable));
+    }
+
+    @GetMapping("/{folio}")
+    public ResponseEntity<?> findEmployee(@PathVariable UUID folio) {
+        var response = employeeService.searchEmployee(folio);
+        if (!response.message().equals("success")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
-    public ResponseEntity<?> createEmployee(@Valid @RequestBody EmployeeRequest employeeRequest) {
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(employeeService.addEmployee(employeeRequest));
+    public ResponseEntity<?> createNewEmployee(@RequestBody EmployeeRequest employeeRequest){
+        return ResponseEntity.status(HttpStatus.CREATED).body(employeeService.addEmployee(employeeRequest));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> findEmployee(@PathVariable(name = "id") UUID folio) {
-        return ResponseEntity.ok(employeeService.searchEmployee(folio));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteEmployee(@PathVariable(name = "id") UUID folio) {
+    @DeleteMapping("/{folio}")
+    public ResponseEntity<?> deleteEmployee(@PathVariable UUID folio){
         return ResponseEntity.ok(employeeService.deleteEmployee(folio));
     }
 }

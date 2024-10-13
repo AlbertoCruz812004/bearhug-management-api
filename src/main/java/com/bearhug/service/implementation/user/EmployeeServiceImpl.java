@@ -5,17 +5,15 @@ import com.bearhug.persistence.entity.PersonEntity;
 import com.bearhug.persistence.entity.UserEntity;
 import com.bearhug.persistence.repository.EmployeeRepository;
 import com.bearhug.presentation.dto.SimpleResponse;
+import com.bearhug.presentation.dto.user.EmployeeListPageable;
 import com.bearhug.presentation.dto.user.EmployeePageableResponse;
 import com.bearhug.presentation.dto.user.EmployeeRequest;
+import com.bearhug.presentation.dto.user.EmployeeResponse;
 import com.bearhug.service.interfaces.user.IEmployeeService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PagedResourcesAssembler;
-import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.PagedModel;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,64 +23,67 @@ import java.util.UUID;
 public class EmployeeServiceImpl implements IEmployeeService {
 
     private final EmployeeRepository employeeRepository;
-    private final PagedResourcesAssembler<EmployeePageableResponse> pagedResourcesAssembler;
 
-    @Autowired
-    public EmployeeServiceImpl(EmployeeRepository employeeRepository, PagedResourcesAssembler<EmployeePageableResponse> pagedResourcesAssembler) {
+    public EmployeeServiceImpl(EmployeeRepository employeeRepository) {
         this.employeeRepository = employeeRepository;
-        this.pagedResourcesAssembler = pagedResourcesAssembler;
-    }
-
-    @Override
-    public EmployeeEntity addEmployee(EmployeeRequest employeeRequest) {
-        EmployeeEntity employeeEntity = EmployeeEntity.builder()
-                .folio(UUID.randomUUID())
-                .person(PersonEntity.builder()
-                        .name(employeeRequest.name())
-                        .lastname(employeeRequest.lastname())
-                        .age(employeeRequest.age())
-                        .curp(employeeRequest.curp())
-                        .user(UserEntity.builder()
-                                .id(employeeRequest.idUser())
-                                .build()
-                        )
-                        .build()
-                )
-                .build();
-        return employeeRepository.save(employeeEntity);
-    }
-
-    @Override
-    public SimpleResponse<Boolean> deleteEmployee(UUID folio) {
-        if (employeeRepository.existsEmployeeByFolio(folio)) {
-            employeeRepository.deleteEmployeeEntitiesByFolio(folio);
-            return new SimpleResponse<>("Employee successfully eliminated", true);
-        }
-        return new SimpleResponse<>("It was not possible to delete this employee", false);
-    }
-
-    @Override
-    public PagedModel<EntityModel<EmployeePageableResponse>> showAllEmployees(Pageable pageable) {
-        Page<EmployeeEntity> employeeEntities = employeeRepository.findAll(pageable);
-        List<EmployeePageableResponse> employeeResponses = employeeEntities.stream()
-                .map(employee -> new EmployeePageableResponse(
-                        employee.getFolio(),
-                        employee.getPerson().getName(),
-                        employee.getPerson().getLastname(),
-                        employee.getPerson().getCurp(),
-                        employee.getPerson().getAge()
-                )).toList();
-
-        Page<EmployeePageableResponse> pageResponse = new PageImpl<>(employeeResponses, pageable, employeeResponses.size());
-
-        return pagedResourcesAssembler.toModel(pageResponse);
     }
 
     @Override
     public SimpleResponse<?> searchEmployee(UUID folio) {
-        Optional<EmployeeEntity> employeeEntity = employeeRepository.findEmployeeEntitiesByFolio(folio);
-        if (employeeEntity.isPresent())
-            return new SimpleResponse<>("Employee successfully found", employeeEntity.get());
-        return new SimpleResponse<>("The employee with this folio cannot be found.", folio);
+        Optional<EmployeeEntity> employee = employeeRepository.findEmployeeEntitiesByFolio(folio);
+        if (employee.isPresent()) {
+            return new SimpleResponse<EmployeeResponse>("success",
+                    new EmployeeResponse(
+                            employee.get().getFolio(),
+                            employee.get().getPerson().getName(),
+                            employee.get().getPerson().getLastname(),
+                            employee.get().getPerson().getAge(),
+                            employee.get().getPerson().getCurp()
+                    ));
+        }
+        return new SimpleResponse<Boolean>("No employee with this folio was found.", false);
+    }
+
+    @Override
+    public EmployeeListPageable findAllEmployees(Pageable pageable) {
+        Page<EmployeeEntity> page = employeeRepository.findAll(pageable);
+        List<EmployeePageableResponse> employees = page.getContent().stream()
+                .map(employee -> {
+                    return EmployeePageableResponse.builder()
+                            .name(employee.getPerson().getName())
+                            .lastname(employee.getPerson().getLastname())
+                            .age(employee.getPerson().getAge())
+                            .folio(employee.getFolio())
+                            .build();
+                }).toList();
+        Long size = page.getTotalElements();
+        Long totalPages = (long) page.getTotalPages();
+        return new EmployeeListPageable(employees, size, totalPages);
+    }
+
+    @Transactional
+    @Override
+    public SimpleResponse<Boolean> deleteEmployee(UUID folio) {
+        if (employeeRepository.existsByFolio(folio)) {
+            employeeRepository.deleteByFolio(folio);
+            return new SimpleResponse<Boolean>("success", true);
+        }
+        return new SimpleResponse<>("The employee could not be deleted", false);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public EmployeeEntity addEmployee(EmployeeRequest employeeRequest) {
+        System.out.println(employeeRequest.toString());
+        return employeeRepository.save(EmployeeEntity.builder()
+                .folio(UUID.randomUUID())
+                .person(PersonEntity.builder()
+                        .name(employeeRequest.name())
+                        .curp(employeeRequest.curp())
+                        .age(employeeRequest.age())
+                        .lastname(employeeRequest.lastname())
+                        .user(new UserEntity(employeeRequest.id()))
+                        .build())
+                .build());
     }
 }
